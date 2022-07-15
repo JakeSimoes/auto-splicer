@@ -158,7 +158,7 @@ elif choice == "2":
         data = json.load(f)
 
     while True:
-        # Confidence is simply transcribes confidence in its guess some
+        # Confidence is transcribes confidence in its guess some
         # may only want better audio clips so the option is here.
         requiredConfidence = float(input("Please give the minimum confidence "
                                          "between 0 and 1\n"))
