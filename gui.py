@@ -1,3 +1,4 @@
+import os.path
 import sys
 import random
 import json
@@ -9,15 +10,19 @@ from os.path import isfile, join
 from pydub import AudioSegment
 from pydub.playback import play
 from PyQt5.QtWidgets import QMainWindow, QApplication, QGridLayout, QWidget, QTextEdit, QPushButton, QFileDialog, QLineEdit, QMessageBox, QLabel
-from PyQt5.QtGui import QIcon
+from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSlot, Qt
+import threading
+
+# Simple Audio is also a dependency, without it this will crash!
 
 class KeyWindow(QWidget):
     def __init__(self, mainWindow):
         super().__init__()
         layout = QGridLayout()
+        self.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         self.setWindowTitle("AWS Info")
-        self.setFixedSize(250,125)
+        self.setStyleSheet(open('style.css').read())
 
         # Grabbing saved data to display in the fields
         if "save.json" in mainWindow.saveFiles:
@@ -86,7 +91,7 @@ class MainWindow(QMainWindow):
         # Getting the folder contents to check for saved data
         self.saveFiles = [f for f in listdir(getcwd()) if
                      isfile(join(getcwd(), f))]
-
+        self.setStyleSheet(open('style.css').read())
         self.setWindowTitle("Auto Splicer Ver. 0.01")
         app.setStyle("Fusion")
         layout = QGridLayout()
@@ -140,10 +145,11 @@ class MainWindow(QMainWindow):
         elif not filename[0]:
             pass
         else:
-            self.sendMessage("Invalid File Selection!")
+            self.sendMessage("Only .WAV files are supported!")
 
     def sendMessage(self, msg_text, error=True):
         msg = QMessageBox()
+        msg.setStyleSheet(open('style.css').read())
         if error:
             msg.setWindowTitle("Error")
             msg.setIcon(QMessageBox.Critical)
@@ -204,11 +210,20 @@ class MainWindow(QMainWindow):
     def spliceAudio(self, audio_file, json_file, job_name, required_confidence=0.1):
         # This is the main splicing loop which uses the timestamps in the json
         # to splice up the given wav file and export it to the chosen folder.
+        print("Hello!")
         audio = AudioSegment.from_wav(audio_file)
-        mkdir(getcwd() + '\\audio\\{}\\'.format(str(job_name)))
+        if not os.path.exists(getcwd() + '\\audio\\'):
+            try:
+                mkdir(getcwd() + '\\audio\\')
+            except Exception as e:
+                self.sendMessage(e, True)
+
         self.audioDirectory = getcwd() + '\\audio\\{}\\'.format(str(job_name))
+        mkdir(self.audioDirectory)
         self.wordList = []
+        print("Hello before the try!")
         try:
+            print("Hello from the try!")
             for i in range(len(json_file['results']['items'])):
                 if "start_time" in json_file['results']['items'][i]:
                     a = float(json_file['results']['items'][i]['start_time']) * 1000
@@ -256,7 +271,8 @@ class MainWindow(QMainWindow):
                     r"{}/{}.wav".format(self.audioDirectory, i))
 
         if audio != 0:
-            play(audio)
+            t = threading.Thread(target=play, args=(audio,))
+            t.start()
 
     def startSession(self):
         if self.session == None:
